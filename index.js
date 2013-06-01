@@ -43,6 +43,7 @@ function Browserify (opts) {
     self._mapped = {};
     self._transforms = [];
     self._noParse =[];
+    self._mdepsTransforms = [];
      
     var noParse = [].concat(opts.noParse).filter(Boolean);
     var cwd = process.cwd();
@@ -59,6 +60,11 @@ function Browserify (opts) {
 
 Browserify.prototype.add = function (file) {
     this.require(file, { entry: true });
+    return this;
+};
+
+Browserify.prototype.mdepsTransform = function (t) {
+    this._mdepsTransforms.push(t);
     return this;
 };
 
@@ -203,7 +209,10 @@ Browserify.prototype.deps = function (opts) {
         return tr;
     }
     
-    var d = mdeps(self.files, opts);
+    var d = self._mdepsTransforms.reduce(function(a, t) {
+        a.pipe(t);
+        return t;
+    }, mdeps(self.files, opts));
     
     var tr = d.pipe(through(write));
     d.on('error', tr.emit.bind(tr, 'error'));
